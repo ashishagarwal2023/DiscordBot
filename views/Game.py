@@ -1,5 +1,6 @@
 from lib.win import win
 import discord
+from .Expired import ExpiredGame
 
 choices = ["Rock", "Paper", "Scissors"]
 emojis = {
@@ -10,12 +11,16 @@ emojis = {
 
 class GameView(discord.ui.View):
     def __init__(self, opponent, challenger):
-        super().__init__(timeout=60)
+        super().__init__(timeout=30)
         self.opponent = opponent
         self.challenger = challenger
         self.chance = challenger
         self.chances = [None, None]
         self.finished = False
+
+    async def on_timeout(self):
+        emb = discord.Embed(title="Challenge Expired", description=f"This challenge has expired automatically.", color=discord.Color.dark_gray())
+        await self.message.edit(view=ExpiredGame(), embed=emb, content="")
 
     async def end(self, interaction):
         self.finished = True
@@ -23,9 +28,9 @@ class GameView(discord.ui.View):
         result_embed.add_field(name=self.challenger.name, value=f"{self.chances[0]} {emojis[self.chances[0]]}")
         result_embed.add_field(name=self.opponent.name, value=f"{self.chances[1]} {emojis[self.chances[1]]}")
         winner = win(self.chances[0], self.chances[1])
-        if winner is None:
+        if winner == None:
             result_embed.add_field(name="Result", value="It's a draw!", inline=False)
-        elif winner is 1:
+        elif winner == 1:
             result_embed.add_field(name="Winner", value=f"{self.challenger.mention} wins!", inline=False)
         else:
             result_embed.add_field(name="Winner", value=f"{self.opponent.mention} wins!", inline=False)

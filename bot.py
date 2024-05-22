@@ -21,7 +21,22 @@ tree = app_commands.CommandTree(client)
 @check_opponent
 async def rps_command(interaction, opponent: discord.Member):
     emb = discord.Embed(title="Pending Confirmation", description=f"{interaction.user.mention} is challenging {opponent.mention} in Rock Paper Scissors!", color=discord.Color.yellow())
-    await interaction.response.send_message(embed=emb, content=opponent.mention, view=PendingView(opponent, interaction.user))
+
+    view = PendingView(opponent, interaction.user)
+    await interaction.response.send_message(embed=emb, content=opponent.mention, view=view)
+    message = await interaction.original_response()
+    view.message = message
+
+    await message.edit(embed=emb, content=opponent.mention, view=view)
+
+@tree.command(name="ping", description="Check the bot's latency.",)
+async def ping(interaction: discord.Interaction):
+    """Pong!"""
+    ping_message = f"Ping!"
+    if interaction.user.id == 1153023901203447940:
+        ping_delay = round(client.latency * 1000)
+        ping_message = f"Ping: {ping_delay}ms"
+    await interaction.response.send_message(content=ping_message)
 
 @client.event
 async def on_ready():
