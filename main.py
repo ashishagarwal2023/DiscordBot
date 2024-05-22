@@ -17,15 +17,19 @@ class PendingView(discord.ui.View):
         super().__init__(timeout=30)
         self.opponent = opponent
         self.challenger = challenger
+        self.finished = False
 
     
     async def on_timeout(self):
+        if self.finished:
+            return
         emb = discord.Embed(title="Challenge Expired", description=f"This challenge has expired automatically.", color=discord.Color.dark_gray())
         await self.message.edit(view=ExpiredPending(), embed=emb, content="")
     
     @discord.ui.button(label="Accept", style=discord.ButtonStyle.success)
     async def accept_callback(self, interaction, button):
         if interaction.user == self.opponent:
+            self.finished = True
             emb = discord.Embed(title="Challenge Confirmed", description=f"Challenge accepted! {self.challenger.mention}, it's your turn!", color=discord.Color.green())
             view = GameView(self.opponent, self.challenger)
             await interaction.response.edit_message(embed=emb, content=self.challenger.mention, view=view)
@@ -38,6 +42,7 @@ class PendingView(discord.ui.View):
     @discord.ui.button(label="Decline", style=discord.ButtonStyle.danger)
     async def decline_callback(self, interaction, button):
         if interaction.user == self.opponent:
+            self.finished = True
             emb = discord.Embed(title="Challenge Declined", description=f"{self.opponent.mention} declined {self.challenger.mention}'s challenge in Rock Paper Scissors.", color=discord.Color.red())
             await interaction.response.edit_message(content=None, view=None, embed=emb)
         else:
@@ -47,6 +52,7 @@ class PendingView(discord.ui.View):
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.gray)
     async def cancel_callback(self, interaction, button):
         if interaction.user == self.challenger:
+            self.finished = True
             emb = discord.Embed(title="Challenge Cancelled", description=f"This challenge has been cancelled by {self.challenger.mention}", color=discord.Color.dark_gray())
             await self.message.edit(view=ExpiredPending(), embed=emb, content="")
             await interaction.response.send_message("Challenge cancelled.", ephemeral=True)
@@ -72,6 +78,8 @@ class GameView(discord.ui.View):
         self.finished = False
 
     async def on_timeout(self):
+        if self.finished:
+            return
         emb = discord.Embed(title="Challenge Expired", description=f"This challenge has expired automatically.", color=discord.Color.dark_gray())
         await self.message.edit(view=ExpiredGame(), embed=emb, content="")
 
