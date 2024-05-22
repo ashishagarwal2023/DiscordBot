@@ -19,6 +19,8 @@ class GameView(discord.ui.View):
         self.finished = False
 
     async def on_timeout(self):
+        if self.finished:
+            return
         emb = discord.Embed(title="Challenge Expired", description=f"This challenge has expired automatically.", color=discord.Color.dark_gray())
         await self.message.edit(view=ExpiredGame(), embed=emb, content="")
 
