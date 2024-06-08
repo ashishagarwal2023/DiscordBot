@@ -10,12 +10,13 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
 intents.members = True
+
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-CATEGORY_ID = 1246366741643137095
-BLACKLISTED_ID = 1247292208692854906
-SUPPORT_ID = 1246863738779205753
+CATEGORY_ID = 1248283757346164882
+BLACKLISTED_ID = 1248306051921739927
+SUPPORT_ID = 1248305869947670579
 
 TICK_EMOJI = "<:tick:1247281066889318401>"
 X_EMOJI = "❌"
@@ -30,15 +31,14 @@ class TicketCloseView(discord.ui.View):
     async def close_ticket(self, interaction: discord.Interaction, button):
         interaction.response.defer(ephemeral=True)
         message = interaction.message
-        if message.channel.topic is not None:
-                  ticket_opener = interaction.user
 
-                  if ticket_opener:
-                      await message.channel.set_permissions(ticket_opener, view_channel=False)
+        for member in message.channel.members:
+            if discord.utils.get(member.roles, id=SUPPORT_ID) is None:
+                await message.channel.set_permissions(member, view_channel=False)
 
-                      emb = discord.Embed(description=f"Ticket closed by {interaction.user.mention}", color=discord.Color.yellow())
-                      await message.channel.send(embed=emb, view=ClosedTicket())
-                      await interaction.response.send_message(ephemeral=True, content="Successfully closed ticket")
+        emb = discord.Embed(description=f"Ticket closed by {interaction.user.mention}", color=discord.Color.yellow())
+        await message.channel.send(embed=emb, view=ClosedTicket())
+        await interaction.response.send_message(ephemeral=True, content="Successfully closed ticket")
 
 class ClosedTicket(discord.ui.View):
   def __init__(self):
@@ -118,14 +118,14 @@ class ButtonView(discord.ui.View):
                 role = discord.utils.get(interaction.guild.roles, id=SUPPORT_ID)
                 await message.channel.send(f"<:tick:1247281066889318401> Thank you very much! Please wait for our staff to respond to you, while you do, please read <#1079976824873943052>\n<:tick:1247281066889318401> At any given moment, we have over 30+ tickets open, so please **avoid pinging our staff**, I already did once, {role.mention}")
             except asyncio.TimeoutError:
-                # ticket expired (1min)
+                # ticket expired (5min)
                 await channel.send(f"Sorry, {interaction.user.mention}, you took too long to respond. Please create a new ticket if you still need assistance. I'm closing this ticket for now.")
                 emb = discord.Embed(description="Ticket closed", color=discord.Color.yellow())
                 await channel.send(embed=emb)
                 await channel.delete()
         else:
             # category not found
-            await interaction.response.send_message("Category 'Tickets' not found.", ephemeral=True)  # Ephemeral message
+            await interaction.response.send_message("Category not found.", ephemeral=True)  # Ephemeral message
 
 @tree.command(name="ticket-button", description="Sends a button in the current channel to create a ticket.")
 async def send_ticket_button_command(interaction: discord.Interaction):
@@ -136,7 +136,7 @@ async def send_ticket_button_command(interaction: discord.Interaction):
     await interaction.channel.send(view=ButtonView(), embed=emb)
 
 @client.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     fetched_message = await message.channel.fetch_message(message.id)
     content = fetched_message.content
 
@@ -162,18 +162,15 @@ async def on_message(message):
         except IndexError:
             await message.add_reaction(X_EMOJI)
 
-    if isinstance(message.channel, discord.TextChannel) and message.channel.category and message.channel.category.id == 1246366741643137095 and not message.author.bot:
+    if isinstance(message.channel, discord.TextChannel) and message.channel.category and message.channel.category.id == CATEGORY_ID and not message.author.bot:
         # $close command
         if content == "$close":
-           if message.channel.topic is not None:
-                  ticketop_user_id = int(message.channel.topic.split(": ")[1])
-                  ticket_opener = message.guild.get_member(ticketop_user_id)
+            for member in message.channel.members:
+                if discord.utils.get(member.roles, id=SUPPORT_ID) is None:
+                    await message.channel.set_permissions(member, view_channel=False)
 
-                  if ticket_opener:
-                      await message.channel.set_permissions(ticket_opener, view_channel=False)
-
-                      emb = discord.Embed(description=f"Ticket closed by {message.author.mention}", color=discord.Color.yellow())
-                      await message.channel.send(embed=emb, view=ClosedTicket())
+            emb = discord.Embed(description=f"Ticket closed by {message.author.mention}", color=discord.Color.yellow())
+            await message.channel.send(embed=emb, view=ClosedTicket())
 
         # $rename command
         elif content.startswith("$rename"):
